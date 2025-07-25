@@ -2,6 +2,11 @@ class PhantomLightningShow {
   constructor() {
     this.canvas = document.getElementById("gameCanvas");
     this.ctx = this.canvas.getContext("2d");
+
+    // Initialize logical dimensions for Safari compatibility
+    this.logicalWidth = 1200;
+    this.logicalHeight = 800;
+
     this.setupResponsiveCanvas();
     this.audio = document.getElementById("phantomAudio");
 
@@ -63,13 +68,23 @@ class PhantomLightningShow {
       const aspectRatio = 3 / 2; // 1200:800 ratio
       const canvasHeight = containerWidth / aspectRatio;
 
-      // Set actual canvas resolution
-      this.canvas.width = containerWidth;
-      this.canvas.height = canvasHeight;
+      // Use device pixel ratio for crisp rendering on high-DPI displays (Safari mobile fix)
+      const devicePixelRatio = window.devicePixelRatio || 1;
 
-      // Set canvas display size
+      // Set actual canvas resolution (multiply by device pixel ratio for crisp rendering)
+      this.canvas.width = containerWidth * devicePixelRatio;
+      this.canvas.height = canvasHeight * devicePixelRatio;
+
+      // Set canvas display size (CSS pixels)
       this.canvas.style.width = containerWidth + "px";
       this.canvas.style.height = canvasHeight + "px";
+
+      // Scale the context to match device pixel ratio
+      this.ctx.scale(devicePixelRatio, devicePixelRatio);
+
+      // Store logical dimensions for calculations
+      this.logicalWidth = containerWidth;
+      this.logicalHeight = canvasHeight;
 
       // Re-render if needed
       if (this.imageLoaded) {
@@ -370,30 +385,30 @@ class PhantomLightningShow {
     const numBolts = Math.min(baseBolts + midBolts + trebleBolts, 8); // Cap at 8 bolts
 
     for (let i = 0; i < numBolts; i++) {
-      // Position lightning based on dominant frequency
+      // Position lightning based on dominant frequency using logical dimensions
+      const canvasWidth = this.logicalWidth || this.canvas.width;
+      const canvasHeight = this.logicalHeight || this.canvas.height;
       let yPosition, intensity, duration;
 
       if (bassRatio > 0.5) {
         // Bass lightning - lower on screen, thicker, longer lasting
-        yPosition =
-          this.canvas.height * 0.4 + Math.random() * this.canvas.height * 0.3;
+        yPosition = canvasHeight * 0.4 + Math.random() * canvasHeight * 0.3;
         intensity = (volume + bass) / 400;
         duration = 20 + Math.random() * 15; // Longer lasting
       } else if (trebleRatio > 0.4) {
         // Treble lightning - higher on screen, thinner, faster
-        yPosition = Math.random() * this.canvas.height * 0.4;
+        yPosition = Math.random() * canvasHeight * 0.4;
         intensity = (volume + treble) / 350;
         duration = 8 + Math.random() * 8; // Faster
       } else {
         // Mid lightning - middle area, medium properties
-        yPosition =
-          this.canvas.height * 0.2 + Math.random() * this.canvas.height * 0.4;
+        yPosition = canvasHeight * 0.2 + Math.random() * canvasHeight * 0.4;
         intensity = (volume + mid) / 380;
         duration = 15 + Math.random() * 10; // Medium
       }
 
       this.lightningFlashes.push({
-        x: Math.random() * this.canvas.width,
+        x: Math.random() * canvasWidth,
         y: yPosition,
         intensity: Math.min(intensity, 1),
         age: 0,
@@ -608,14 +623,18 @@ class PhantomLightningShow {
     this.ctx.save();
 
     // Calculate phantom position and size - true portrait that fills the frame
+    // Use logical dimensions for proper scaling across devices
+    const canvasWidth = this.logicalWidth || this.canvas.width;
+    const canvasHeight = this.logicalHeight || this.canvas.height;
+
     // Use full canvas height for dramatic portrait effect
-    const portraitHeight = this.canvas.height * 0.95; // 95% of canvas height for full portrait
+    const portraitHeight = canvasHeight * 0.95; // 95% of canvas height for full portrait
     const phantomHeight = portraitHeight * this.phantomScale;
     const phantomWidth =
       (this.phantomImage.width / this.phantomImage.height) * phantomHeight;
 
     // If width would be too wide for the canvas, scale down proportionally
-    const maxWidth = this.canvas.width * 0.95; // Max 95% of canvas width
+    const maxWidth = canvasWidth * 0.95; // Max 95% of canvas width
     let finalWidth = phantomWidth;
     let finalHeight = phantomHeight;
 
@@ -625,9 +644,9 @@ class PhantomLightningShow {
       finalHeight = phantomHeight * scale;
     }
 
-    const phantomX = (this.canvas.width - finalWidth) / 2;
+    const phantomX = (canvasWidth - finalWidth) / 2;
     // Position like a traditional portrait - completely bottom aligned
-    const phantomY = this.canvas.height - finalHeight; // No bottom margin - fills frame completely
+    const phantomY = canvasHeight - finalHeight; // No bottom margin - fills frame completely
     const phantomCenterX = phantomX + finalWidth / 2;
     const phantomCenterY = phantomY + finalHeight / 2;
 
@@ -684,9 +703,7 @@ class PhantomLightningShow {
     const brightnessPercent = Math.max(finalBrightness * 100, 0); // Allow complete darkness
     const contrastPercent = Math.min(100 + this.smoothedIllumination * 80, 180); // Add contrast when illuminated
 
-    // Apply CSS filter for brightness/contrast while preserving opacity
-    this.ctx.filter = `brightness(${brightnessPercent}%) contrast(${contrastPercent}%)`;
-
+    // Safari-compatible solid phantom with darkness overlay
     // Add dramatic shadow only when there's actual lightning nearby AND active flashes
     if (maxIllumination > 0.2 && this.lightningFlashes.length > 0) {
       this.ctx.shadowColor = `rgba(${lightningTint.r}, ${lightningTint.g}, ${
@@ -701,18 +718,36 @@ class PhantomLightningShow {
       this.ctx.shadowOffsetY = 0;
     }
 
-    // Draw the phantom directly - solid but with brightness adjusted
-    this.ctx.globalAlpha = 1; // Always fully opaque
-    this.ctx.drawImage(
+    // Safari-compatible approach using temporary canvas to preserve transparency
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d");
+    tempCanvas.width = finalWidth;
+    tempCanvas.height = finalHeight;
+
+    // Draw phantom to temp canvas
+    tempCtx.drawImage(
       this.phantomImage,
-      phantomX,
-      phantomY,
+      0,
+      0,
+      this.phantomImage.width,
+      this.phantomImage.height,
+      0,
+      0,
       finalWidth,
       finalHeight
     );
 
-    // Reset filter for other drawings
-    this.ctx.filter = "none";
+    // Apply darkness only to existing pixels (preserves transparency)
+    if (finalBrightness < 1) {
+      tempCtx.globalCompositeOperation = "source-atop"; // Only affects existing pixels
+      const darknessLevel = 1 - finalBrightness;
+      tempCtx.fillStyle = `rgba(0, 0, 0, ${darknessLevel})`;
+      tempCtx.fillRect(0, 0, finalWidth, finalHeight);
+    }
+
+    // Draw the processed phantom to main canvas
+    this.ctx.globalAlpha = 1;
+    this.ctx.drawImage(tempCanvas, phantomX, phantomY);
 
     this.ctx.restore();
   }
