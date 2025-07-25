@@ -384,35 +384,49 @@ class PhantomLightningShow {
     const numBolts = Math.min(baseBolts + midBolts + trebleBolts, 8); // Cap at 8 bolts
 
     for (let i = 0; i < numBolts; i++) {
-      // Position lightning based on dominant frequency using logical dimensions
+      // Position lightning coming from the sky - more realistic!
       const canvasWidth = this.logicalWidth || this.canvas.width;
       const canvasHeight = this.logicalHeight || this.canvas.height;
-      let yPosition, intensity, duration;
+      let yPosition, intensity, duration, reachDistance;
+
+      // All lightning starts from high in the sky (storm clouds)
+      const skyStartY =
+        -canvasHeight * 0.1 + Math.random() * canvasHeight * 0.05; // Start above the visible area
 
       if (bassRatio > 0.5) {
-        // Bass lightning - lower on screen, thicker, longer lasting
-        yPosition = canvasHeight * 0.4 + Math.random() * canvasHeight * 0.3;
+        // Bass lightning - reaches deepest into the scene, thicker, longer lasting
+        const maxReach = canvasHeight * 1.1; // Can reach beyond the bottom of screen
+        reachDistance = 0.6 + (bass / 255) * 0.4; // Bass intensity determines how far down
+        yPosition = skyStartY + maxReach * reachDistance;
         intensity = (volume + bass) / 400;
         duration = 20 + Math.random() * 15; // Longer lasting
       } else if (trebleRatio > 0.4) {
-        // Treble lightning - higher on screen, thinner, faster
-        yPosition = Math.random() * canvasHeight * 0.4;
+        // Treble lightning - shorter reach, thinner, faster
+        const maxReach = canvasHeight * 0.7; // Reaches 70% down from high sky
+        reachDistance = 0.4 + (treble / 255) * 0.4; // Treble intensity determines reach
+        yPosition = skyStartY + maxReach * reachDistance;
         intensity = (volume + treble) / 350;
         duration = 8 + Math.random() * 8; // Faster
       } else {
-        // Mid lightning - middle area, medium properties
-        yPosition = canvasHeight * 0.2 + Math.random() * canvasHeight * 0.4;
+        // Mid lightning - medium reach, medium properties
+        const maxReach = canvasHeight * 0.9; // Reaches 90% down from high sky
+        reachDistance = 0.5 + (mid / 255) * 0.4; // Mid intensity determines reach
+        yPosition = skyStartY + maxReach * reachDistance;
         intensity = (volume + mid) / 380;
         duration = 15 + Math.random() * 10; // Medium
       }
 
       this.lightningFlashes.push({
         x: Math.random() * canvasWidth,
-        y: yPosition,
+        y: skyStartY, // Start from the sky position, branches will extend down
         intensity: Math.min(intensity, 1),
         age: 0,
         maxAge: duration,
-        branches: this.generateLightningBranches(bassRatio, trebleRatio),
+        branches: this.generateLightningBranches(
+          bassRatio,
+          trebleRatio,
+          yPosition - skyStartY
+        ), // Pass reach distance
         color: this.getLightningColor(bass, mid, treble),
         frequencyType:
           bassRatio > 0.5 ? "bass" : trebleRatio > 0.4 ? "treble" : "mid",
@@ -425,31 +439,35 @@ class PhantomLightningShow {
     }
   }
 
-  generateLightningBranches(bassRatio = 0.33, trebleRatio = 0.33) {
+  generateLightningBranches(
+    bassRatio = 0.33,
+    trebleRatio = 0.33,
+    targetReachDistance = 300
+  ) {
     const branches = [];
 
-    // Adjust branch characteristics based on frequency
-    let numBranches, segmentLength, spread, verticalStep;
+    // Adjust branch characteristics based on frequency for realistic sky-to-ground lightning
+    let numBranches, segmentLength, spread;
 
     if (bassRatio > 0.5) {
-      // Bass lightning - fewer, thicker, more vertical branches
+      // Bass lightning - fewer, thicker, more direct downward strikes
       numBranches = 2 + Math.floor(Math.random() * 3);
-      segmentLength = 12 + Math.floor(Math.random() * 8);
-      spread = 60; // Wider spread
-      verticalStep = 35; // Larger vertical steps
+      segmentLength = 8 + Math.floor(Math.random() * 6);
+      spread = 40; // Moderate horizontal spread
     } else if (trebleRatio > 0.4) {
-      // Treble lightning - many thin, jagged branches
+      // Treble lightning - many thin, jagged downward branches
       numBranches = 4 + Math.floor(Math.random() * 6);
-      segmentLength = 6 + Math.floor(Math.random() * 8);
-      spread = 25; // Narrower spread
-      verticalStep = 15; // Smaller vertical steps
+      segmentLength = 10 + Math.floor(Math.random() * 8);
+      spread = 30; // Narrower spread, more erratic
     } else {
-      // Mid lightning - balanced characteristics
+      // Mid lightning - balanced downward characteristics
       numBranches = 3 + Math.floor(Math.random() * 4);
-      segmentLength = 8 + Math.floor(Math.random() * 10);
-      spread = 40;
-      verticalStep = 25;
+      segmentLength = 9 + Math.floor(Math.random() * 7);
+      spread = 35;
     }
+
+    // Calculate step size to reach the target distance
+    const verticalStep = targetReachDistance / segmentLength;
 
     for (let i = 0; i < numBranches; i++) {
       const branch = [];
@@ -458,8 +476,10 @@ class PhantomLightningShow {
 
       for (let j = 0; j < segmentLength; j++) {
         branch.push({ x, y });
+        // Horizontal zigzag with occasional branching
         x += (Math.random() - 0.5) * spread;
-        y += Math.random() * verticalStep + 10;
+        // Move downward to reach target distance
+        y += verticalStep + (Math.random() - 0.5) * verticalStep * 0.3; // Add some variation
       }
       branches.push(branch);
     }
@@ -659,19 +679,34 @@ class PhantomLightningShow {
 
     this.lightningFlashes.forEach((flash) => {
       if (flash.age < flash.maxAge) {
-        // Calculate distance from lightning to phantom center
-        const distance = Math.sqrt(
-          Math.pow(flash.x - phantomCenterX, 2) +
-            Math.pow(flash.y - phantomCenterY, 2)
-        );
+        const flashAlpha = 1 - flash.age / flash.maxAge;
+        let closestDistance = Infinity;
+
+        // Check distance to each branch point (where lightning actually is)
+        flash.branches.forEach((branch) => {
+          branch.forEach((point) => {
+            // Calculate actual lightning position (flash origin + branch offset)
+            const lightningX = flash.x + point.x;
+            const lightningY = flash.y + point.y;
+
+            // Calculate distance from this lightning point to phantom center
+            const distance = Math.sqrt(
+              Math.pow(lightningX - phantomCenterX, 2) +
+                Math.pow(lightningY - phantomCenterY, 2)
+            );
+
+            if (distance < closestDistance) {
+              closestDistance = distance;
+            }
+          });
+        });
 
         // Maximum illumination distance
-        const maxDistance = 400;
-        const flashAlpha = 1 - flash.age / flash.maxAge;
+        const maxDistance = 500; // Increased range since lightning is more spread out
 
-        if (distance < maxDistance) {
-          // Calculate illumination based on distance and flash intensity
-          const proximityFactor = 1 - distance / maxDistance;
+        if (closestDistance < maxDistance) {
+          // Calculate illumination based on closest lightning point
+          const proximityFactor = 1 - closestDistance / maxDistance;
           const illumination = proximityFactor * flash.intensity * flashAlpha;
 
           if (illumination > maxIllumination) {
