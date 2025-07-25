@@ -708,17 +708,20 @@ class PhantomLightningShow {
     const contrastPercent = Math.min(100 + this.smoothedIllumination * 80, 180); // Add contrast when illuminated
 
     // Safari-compatible solid phantom with darkness overlay
-    // Add dramatic shadow only when there's actual lightning nearby AND active flashes
+    // Add dramatic glow only when there's actual lightning nearby AND active flashes
+    // Use glow without offset to prevent jumping
     if (maxIllumination > 0.2 && this.lightningFlashes.length > 0) {
       this.ctx.shadowColor = `rgba(${lightningTint.r}, ${lightningTint.g}, ${
         lightningTint.b
-      }, ${maxIllumination * 0.9})`;
-      this.ctx.shadowBlur = 30 * maxIllumination;
-      this.ctx.shadowOffsetY = 15;
+      }, ${maxIllumination * 0.7})`;
+      this.ctx.shadowBlur = 25 * maxIllumination;
+      this.ctx.shadowOffsetX = 0; // No offset to prevent jumping
+      this.ctx.shadowOffsetY = 0; // No offset to prevent jumping
     } else {
       // No shadow when no lightning
       this.ctx.shadowColor = "transparent";
       this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetX = 0;
       this.ctx.shadowOffsetY = 0;
     }
 
