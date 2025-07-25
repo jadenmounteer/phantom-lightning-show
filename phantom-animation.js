@@ -556,6 +556,10 @@ class PhantomLightningShow {
   }
 
   drawLightning() {
+    // Account for device pixel ratio to prevent blurry lightning on mobile
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const scale = 1 / devicePixelRatio; // Compensate for canvas scaling
+
     this.lightningFlashes.forEach((flash) => {
       const alpha = 1 - flash.age / flash.maxAge;
 
@@ -564,27 +568,27 @@ class PhantomLightningShow {
         this.ctx.translate(flash.x, flash.y);
         this.ctx.globalAlpha = alpha * flash.intensity;
 
-        // Adjust visual properties based on frequency type
+        // Adjust visual properties based on frequency type with DPR compensation
         let lineWidth, glowWidth, shadowBlur;
 
         switch (flash.frequencyType) {
           case "bass":
             // Bass lightning - thick, bold strokes with heavy glow
-            lineWidth = 3 + flash.intensity * 5;
-            glowWidth = 10 + flash.intensity * 12;
-            shadowBlur = 25;
+            lineWidth = (3 + flash.intensity * 5) * scale;
+            glowWidth = (10 + flash.intensity * 12) * scale;
+            shadowBlur = 25 * scale;
             break;
           case "treble":
             // Treble lightning - thin, sharp strokes with bright glow
-            lineWidth = 1 + flash.intensity * 2;
-            glowWidth = 4 + flash.intensity * 6;
-            shadowBlur = 10;
+            lineWidth = (1 + flash.intensity * 2) * scale;
+            glowWidth = (4 + flash.intensity * 6) * scale;
+            shadowBlur = 10 * scale;
             break;
           default: // mid
             // Mid lightning - medium properties
-            lineWidth = 2 + flash.intensity * 3;
-            glowWidth = 6 + flash.intensity * 8;
-            shadowBlur = 15;
+            lineWidth = (2 + flash.intensity * 3) * scale;
+            glowWidth = (6 + flash.intensity * 8) * scale;
+            shadowBlur = 15 * scale;
             break;
         }
 
