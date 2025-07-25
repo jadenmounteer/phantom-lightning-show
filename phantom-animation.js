@@ -306,10 +306,9 @@ class PhantomLightningShow {
     // Update background lighting based on overall volume (more subtle)
     this.backgroundLightning = Math.min(averageVolume / 400, 0.6);
 
-    // Scale phantom with all frequency ranges (not just bass)
-    const totalFrequencyActivity =
-      (combinedBass + combinedMid + combinedTreble) / 3;
-    this.phantomScale = 1 + (totalFrequencyActivity / 400) * 0.04;
+    // Keep phantom scale stable to prevent jumping/movement
+    // Removed dynamic scaling to maintain solid, unchanging presence
+    this.phantomScale = 1; // Fixed scale - no movement
   }
 
   calculateCleanAverage(frequencyArray, noiseFloor) {
