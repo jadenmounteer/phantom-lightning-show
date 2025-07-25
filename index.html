@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phantom of the Opera - Animated Scene</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        background: #000;
+        font-family: "Arial", sans-serif;
+        color: white;
+      }
+
+      .app-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 20px;
+        background: #111;
+        border-radius: 10px;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+
+        .header {
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 15px;
+        }
+
+        .title-section h1 {
+          font-size: 20px;
+        }
+
+        .status-section {
+          text-align: center;
+          width: 100%;
+        }
+
+        .controls {
+          flex-direction: column;
+          align-items: center;
+          padding: 15px;
+        }
+
+        button {
+          width: 200px;
+          margin: 5px 0;
+          padding: 15px 20px;
+          font-size: 16px;
+        }
+
+        input[type="range"] {
+          width: 150px;
+        }
+
+        .canvas-container {
+          margin-bottom: 15px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 5px;
+        }
+
+        .header {
+          padding: 10px;
+        }
+
+        .title-section h1 {
+          font-size: 18px;
+        }
+
+        .title-section p {
+          font-size: 12px;
+        }
+
+        button {
+          width: 100%;
+          max-width: 250px;
+        }
+      }
+
+      .title-section h1 {
+        margin: 0;
+        color: #dc143c;
+        font-size: 24px;
+      }
+
+      .title-section p {
+        margin: 5px 0 0 0;
+        color: #ccc;
+        font-size: 14px;
+      }
+
+      .status-section {
+        text-align: right;
+      }
+
+      .canvas-container {
+        position: relative;
+        border: 2px solid #333;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        width: 100%;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+        aspect-ratio: 3/2;
+      }
+
+      #gameCanvas {
+        display: block;
+        background: radial-gradient(circle at center, #1a1a2e 0%, #000 70%);
+        width: 100%;
+        height: auto;
+        max-width: 1200px;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        padding: 20px;
+        background: #111;
+        border-radius: 10px;
+      }
+
+      button {
+        background: linear-gradient(45deg, #8b0000, #dc143c);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(220, 20, 60, 0.3);
+      }
+
+      button:hover {
+        background: linear-gradient(45deg, #dc143c, #ff6347);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(220, 20, 60, 0.5);
+      }
+
+      button:disabled {
+        background: #555;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #dc143c;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      .sensitivity-control {
+        margin-top: 10px;
+      }
+
+      input[type="range"] {
+        width: 100px;
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <div class="header">
+        <div class="title-section">
+          <h1>Phantom Lightning Show</h1>
+          <p>
+            Audio-visual journey synchronized with The Phantom of the Opera
+            overture
+          </p>
+        </div>
+        <div class="status-section">
+          <div>Audio Status: <span id="audioStatus">Stopped</span></div>
+          <div class="sensitivity-control">
+            Lightning Sensitivity:
+            <input
+              type="range"
+              id="sensitivitySlider"
+              min="50"
+              max="200"
+              value="100"
+            />
+            <span id="sensitivityValue">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="loading" id="loading">Loading assets...</div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn">Start Experience</button>
+        <button id="pauseBtn" disabled>Pause</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+
+      <audio id="phantomAudio" preload="auto">
+        <source
+          src="Overture (From 'The Phantom Of The Opera' Motion Picture).mp3"
+          type="audio/mpeg"
+        />
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+
+    <script src="phantom-animation.js"></script>
+  </body>
+</html>
